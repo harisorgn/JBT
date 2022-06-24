@@ -4,8 +4,10 @@ function loglikelihood_choices(model, chain)
 													MCMCChains.get_sections(chain,
 																			:parameters))
 	ynames = string.(keys(loglikelihoods))
+
 	loglikelihoods_vals = getindex.(Ref(loglikelihoods), ynames)
-	lr = permutedims(cat(loglikelihoods_vals...; dims=3), (2, 1, 3))
+    loglikelihoods_vals = cat([loglikelihoods_vals[i][:,:] for i in eachindex(loglikelihoods_vals)], dims=3)
+	lr = permutedims(loglikelihoods_vals, (2, 1, 3))
 	return lr
 end
 
