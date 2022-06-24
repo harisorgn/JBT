@@ -6,6 +6,8 @@ using Serialization
 using ArviZ: hdi
 using KernelDensity: kde
 
+include("utils.jl")
+
 function win_stay_lose_shift(df)
 
 	fig_sz_inch = (6.4, 4.8)
