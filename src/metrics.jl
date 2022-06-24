@@ -122,6 +122,10 @@ function reward_blocks(t; n_blocks=4)
 	return b
 end
 
+"""
+This function calculates the reward rate (average reward) from past trials of a specific cue,
+within a trial window of length window_length.
+"""
 function cue_reward_rate(t; window_length=12)
 
 	trial_idx = collect(1:length(t.trial))
@@ -134,6 +138,10 @@ function cue_reward_rate(t; window_length=12)
 	return append!([0.0],R)
 end
 
+"""
+This function calculates the reward rate (average reward) of past trials within a
+trial window of length window_length.
+"""
 function reward_rate(t; window_length=12)
 
 	trial_idx = collect(1:length(t.trial))

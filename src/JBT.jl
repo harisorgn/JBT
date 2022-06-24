@@ -2,7 +2,8 @@ module JBT
 
 export read_JBT, df_to_JBT, JBTExperiment,
         plot_CBI!, plot_responses!, plot_RT!, plot_omissions!, plot_prematures!,
-        plot_diff_CBI!, condition_dict, logistic_past, chain_to_idt
+        plot_diff_CBI!, condition_dict, reward_rate, cue_reward_rate,
+        logistic_past, chain_to_idt
 
 using DataFrames
 using CSV
@@ -12,7 +13,7 @@ using LaTeXStrings
 using Distributions: Uniform
 using HypothesisTests
 using Serialization
-using ArviZ: hdi
+using ArviZ
 using KernelDensity: kde
 using Statistics: mean, std
 using LinearAlgebra
