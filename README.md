@@ -6,9 +6,11 @@ In the /src folder, there exist a `JBT` Module, written in Julia (v1.7) that con
 
 The analysis scripts `model_fit.jl`, `model_comparison.jl`, `figures_analysis.jl` and `figures_exp.jl`, are examples of using the `JBT` Module to perform model fitting, model comparison and plotting of experimental and model outcomes. These constituted the results of 2 chapters of my PhD thesis.
 
-In order to use the `JBT` Module, please clone this repository and then 
-
-`cd JBT`
+In order to use the `JBT` Module, please clone this repository, go into the downloaded JBT folder 
+```shell
+cd JBT
+```
+and then open a `julia` instance and run 
 ```julia
 import Pkg
 Pkg.activate(".")
