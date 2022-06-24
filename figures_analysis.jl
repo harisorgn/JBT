@@ -1,14 +1,10 @@
+using JBT
 using CairoMakie
 using ColorSchemes
-using Distributions: Uniform 
+using Distributions: Uniform
 using Serialization
 using ArviZ: hdi
 using KernelDensity: kde
-
-include("JBT.jl")
-include("read.jl")
-include("metrics.jl")
-include("model.jl")
 
 function win_stay_lose_shift(df)
 
@@ -18,15 +14,15 @@ function win_stay_lose_shift(df)
 
 	df_wsls = DataFrame(
 					choice = Int64[],
-					H4 = Float64[], 
+					H4 = Float64[],
 					H0 = Float64[],
-					L1 = Float64[], 
+					L1 = Float64[],
 					L0 = Float64[]
 					)
 
 	for df_date in groupby(df, :date)
 
-		d = combine(groupby(df_date,:ID), AsTable([:choice, :cue, :outcome]) => 
+		d = combine(groupby(df_date,:ID), AsTable([:choice, :cue, :outcome]) =>
 										(t -> [(
 												wsls(t,2,5,2,4),
 												wsls(t,2,5,2,0),
@@ -38,7 +34,7 @@ function win_stay_lose_shift(df)
 		d.choice = fill(2, length(d.ID))
 		append!(df_wsls, d[!, Not(:ID)])
 
-		d = combine(groupby(df_date,:ID), AsTable([:choice, :cue, :outcome]) => 
+		d = combine(groupby(df_date,:ID), AsTable([:choice, :cue, :outcome]) =>
 										(t -> [(
 												wsls(t,8,5,2,4),
 												wsls(t,8,5,2,0),
@@ -61,13 +57,13 @@ function win_stay_lose_shift(df)
 
 	d = df_wsls[df_wsls.choice.==2, Not(:choice)]
 	for (c,i) in zip(eachcol(d), 1:ncol(d))
-		violin!(ax, fill(i, length(c)), c, 
+		violin!(ax, fill(i, length(c)), c,
 				datalimits=extrema, color=colormap[1], side=:right, label="High-reward action (HA)")
 	end
 
 	d = df_wsls[df_wsls.choice.==8, Not(:choice)]
 	for (c,i) in zip(eachcol(d), 1:ncol(d))
-		violin!(ax, fill(i, length(c)), c, 
+		violin!(ax, fill(i, length(c)), c,
 				datalimits=extrema, color=colormap[2], side=:left, label="Low-reward action (LA)")
 	end
 
@@ -113,13 +109,13 @@ function CBI_over_trials(df; n_blocks=4)
 		]
 
 	for (c,i) in zip(eachcol(df_CBI), 1:ncol(df_CBI))
-		
+
 		scatter!(ax[1], rand(d,length(c)).+i, c, marker=:circle, markersize=6, color=(colormap[1],0.05))
 
-		errorbars!(ax[1], [i], [nanmean(c)], [nanstd(c)/sqrt(length(c))], 
+		errorbars!(ax[1], [i], [nanmean(c)], [nanstd(c)/sqrt(length(c))],
 					whiskerwidth=8, color=:black)
 
-		scatter!(ax[1], [i], [nanmean(c)], 
+		scatter!(ax[1], [i], [nanmean(c)],
 					marker=:diamond, markersize=8, color=:black)
 	end
 
@@ -129,10 +125,10 @@ function CBI_over_trials(df; n_blocks=4)
 
 		scatter!(ax[2], rand(d,length(c)).+i, c - c_prev, marker=:circle, markersize=6, color=(colormap[1],0.1))
 
-		errorbars!(ax[2], [i], [nanmean(c) - nanmean(c_prev)], [(nanstd(c)+nanstd(c_prev))/sqrt(length(c))], 
+		errorbars!(ax[2], [i], [nanmean(c) - nanmean(c_prev)], [(nanstd(c)+nanstd(c_prev))/sqrt(length(c))],
 					whiskerwidth=8, color=:black)
 
-		scatter!(ax[2], [i], [nanmean(c) - nanmean(c_prev)], 
+		scatter!(ax[2], [i], [nanmean(c) - nanmean(c_prev)],
 					marker=:diamond, markersize=8, color=:black)
 	end
 
@@ -151,101 +147,6 @@ function CBI_over_trials(df; n_blocks=4)
 	save("./figures/analysis/CBI_blocks.eps",f, pt_per_unit=1)
 end
 
-#=
-function group_posterior_ketamine()
-
-	fig_sz_inch = (6.4,9)
-	font_sz = 12
-
-	colormap = ColorSchemes.seaborn_colorblind6.colors
-
-	df = get_cohort_df(["1vs1", "4vs1", "ket"], 
-					ID_excluded=["HO2_4", "HO2_11"], 
-					S_excluded=["1vs1_1"])
-
-	(choices, data) = df_to_JBT(df, reward_rate)
-	model = logistic_past(choices, data)
-	chain = deserialize("chain_ketamine_RR.jls")
-
-	chain_prior = sample(model, Prior(), 2000)
-	df_prior = DataFrame(chain_prior)
-
-	n_samples = size(chain)[1] * size(chain)[3]
-
-	d_condition = condition_dict(df)
-
-	f = Figure(resolution = 72 .* fig_sz_inch, fontsize=font_sz)
-
-	ga = f[1, 1] = GridLayout()
-	gb = f[1, 2] = GridLayout()
-	gc = f[2, 1] = GridLayout()
-	gd = f[2, 2] = GridLayout()
-	ge = f[3, 1] = GridLayout()
-	gf = f[3, 2] = GridLayout()
-
-	ax = [
-		Axis(ga[1,1],
-			xticks=(0:4, ["Prior", "Base\nfirst", "Base\nsecond", "Veh", "Ket"]),
-			ylabel=L"Bias, $\mu_b$"
-			),
-		Axis(gb[1,1],
-			xlabel=L"Difference in $\mu_b$"
-			),
-		Axis(gc[1,1],
-			xticks=(0:4, ["Prior", "Base\nfirst", "Base\nsecond", "Veh", "Ket"]),
-			ylabel=L"Effect of previous trial, $\mu_w$"
-			),
-		Axis(gd[1,1],
-			xlabel=L"Difference in $\mu_w$"
-			),
-		Axis(ge[1,1],
-			xticks=(0:4, ["Prior", "Base\nfirst", "Base\nsecond", "Veh", "Ket"]),
-			ylabel=L"Effect of reward rate, $\mu_r$"
-			),
-		Axis(gf[1,1],
-			xlabel=L"Difference in $\mu_r$"
-			)
-		]
-
-	condition_v = ["4vs1_1", "4vs1_2", "vehicle", "ketamine"]
-	param_v = ["μ_b", "μ_p", "μ_r"]
-
-	for (param,i) in zip(param_v, 1:2:6)
-		c = group(chain, param)
-
-		violin!(ax[i], fill(0, length(df_prior[!, "μ_b[1]"])), df_prior[!, "μ_b[1]"], 
-				side=:right, color=(:slategray, 0.4))
-
-		for (condition,j) in zip(condition_v, eachindex(condition_v))
-			violin!(ax[i], fill(j, n_samples), c[:,d_condition[condition],:][:].data, 
-				side=:right, color=colormap[j])
-		end
-
-		density!(ax[i+1], 
-				c[:, d_condition["ketamine"],:][:].data - c[:,d_condition["vehicle"],:][:].data,
-				color=colormap[4])
-
-		vlines!(ax[i+1],[0.0], color=:black, linestyle=:dash, linewidth=0.8)
-		xlims!(ax[i+1], -4.0, 4.0)
-	end
-
-	hidexdecorations!.(ax[1:4], grid=false, label=false)
-	colgap!(f.layout, Relative(0.02))
-	rowgap!(f.layout, Relative(0.0))
-	colsize!(f.layout, 1, Auto(1.2))
-	rowsize!(f.layout, 1, Auto(2))
-	rowsize!(f.layout, 2, Auto(2))
-	rowsize!(f.layout, 3, Auto(2))
-
-	for (label, layout) in zip(["A", "B", "C", "D", "E", "F"], [ga, gb, gc, gd, ge, gf])
-	    Label(layout[1, 1, TopLeft()], label,
-	        textsize = 18,
-	        halign = :right)
-	end
-
-	save("./figures/group_post.eps", f, pt_per_unit = 1)
-end
-=#
 function group_posterior_amph()
 
 	fig_sz_inch = (6.4,9)
@@ -305,15 +206,15 @@ function group_posterior_amph()
 	for (param,i) in zip(param_v, 1:2:6)
 		c = group(chain, param)
 
-		violin!(ax[i], fill(0, length(df_prior[!, "μ_b[1]"])), df_prior[!, "μ_b[1]"], 
+		violin!(ax[i], fill(0, length(df_prior[!, "μ_b[1]"])), df_prior[!, "μ_b[1]"],
 				side=:right, color=(:slategray, 0.4))
 
 		for (condition,j) in zip(condition_v, eachindex(condition_v))
-			violin!(ax[i], fill(j, n_samples), c[:,d_condition[condition],:][:].data, 
+			violin!(ax[i], fill(j, n_samples), c[:,d_condition[condition],:][:].data,
 				side=:right, color=colormap[j])
 		end
 
-		density!(ax[i+1], 
+		density!(ax[i+1],
 				c[:, d_condition["amphetamine"],:][:].data - c[:,d_condition["vehicle"],:][:].data,
 				color=colormap[2])
 
@@ -337,42 +238,7 @@ function group_posterior_amph()
 
 	save("./figures/analysis/group_post_amph.eps", f, pt_per_unit = 1)
 end
-#=
-function subject_posterior_lapse_ket()
 
-	fig_sz_inch = (6.4, 4.8)
-	font_sz = 12
-
-	colormap = ColorSchemes.seaborn_colorblind6.colors
-
-	df = get_cohort_df(["1vs1", "4vs1", "ket"], 
-					ID_excluded=["HO2_4", "HO2_11"], 
-					S_excluded=["1vs1_1"])
-
-	(choices, data) = df_to_JBT(df, reward_rate)
-	model = logistic_past(choices, data)
-	chain = deserialize("chain_ketamine_RR.jls")
-
-	chain_prior = sample(model, Prior(), 2000)
-	df_prior = DataFrame(chain_prior)
-	df_c = DataFrame(chain)
-
-	f = Figure(resolution = 72 .* fig_sz_inch, fontsize=font_sz)
-	ax = Axis(f[1,1],
-			xticks=(0:1, ["Prior", "Posterior"]),
-			ylabel=L"Subject-level lapse rate $\epsilon$")
-
-	ε_prior = reduce(vcat, [df_prior[!, "μ_ε"] .+ df_prior[!, "ε_norm[$(i)]"].*df_prior[!, "σ_ε"] for i=1:13])
-	ε = reduce(vcat, [df_c[!, "μ_ε"] .+ df_c[!, "ε_norm[$(i)]"].*df_c[!, "σ_ε"] for i=1:13])
-
-	violin!(ax, fill(0, length(ε_prior)), cdf.(Normal(0,1), ε_prior), 
-			datalimits=extrema, side=:right, color=(:slategray, 0.4))
-	violin!(ax, fill(1, length(ε)), cdf.(Normal(0,1), ε), 
-			datalimits=extrema, side=:right, color=colormap[1])
-
-	save("./figures/subj_post_ket_ε.eps", f, pt_per_unit = 1)
-end
-=#
 function subject_posterior_lapse_amph()
 
 	fig_sz_inch = (6.4, 4.8)
@@ -396,19 +262,19 @@ function subject_posterior_lapse_amph()
 			ylabel=L"Subject lapse rate $\epsilon$")
 
 	ε_prior = reduce(
-					vcat, 
-					[df_prior[!, "μ_ε"] .+ df_prior[!, "ε_norm[$(i)]"].*df_prior[!, "σ_ε"] 
+					vcat,
+					[df_prior[!, "μ_ε"] .+ df_prior[!, "ε_norm[$(i)]"].*df_prior[!, "σ_ε"]
 					for i=1:data.n_subjects]
 					)
 	ε = reduce(
-				vcat, 
-				[df_c[!, "μ_ε"] .+ df_c[!, "ε_norm[$(i)]"].*df_c[!, "σ_ε"] 
+				vcat,
+				[df_c[!, "μ_ε"] .+ df_c[!, "ε_norm[$(i)]"].*df_c[!, "σ_ε"]
 				for i=1:data.n_subjects]
 				)
 
-	violin!(ax, fill(0, length(ε_prior)), cdf.(Normal(0,1), ε_prior), 
+	violin!(ax, fill(0, length(ε_prior)), cdf.(Normal(0,1), ε_prior),
 			datalimits=extrema, side=:right, color=(:slategray, 0.4))
-	violin!(ax, fill(1, length(ε)), cdf.(Normal(0,1), ε), 
+	violin!(ax, fill(1, length(ε)), cdf.(Normal(0,1), ε),
 			datalimits=extrema, side=:right, color=colormap[1])
 
 	save("./figures/analysis/subj_post_lapse_amph.eps", f, pt_per_unit = 1)
@@ -422,8 +288,8 @@ function subject_prior_lapse()
 	colormap = ColorSchemes.seaborn_colorblind6.colors
 
 	d = Dict(
-			"./exp/probe/baseline/baseline_no_effect/"=>"baseline", 
-			"./exp/probe/ketamine/ketamine_no_effect/"=>"ketamine", 
+			"./exp/probe/baseline/baseline_no_effect/"=>"baseline",
+			"./exp/probe/ketamine/ketamine_no_effect/"=>"ketamine",
 			"./exp/probe/ketamine/vehicle_no_effect/"=>"vehicle"
 			)
 	df = get_batch_df(d)
@@ -445,193 +311,7 @@ function subject_prior_lapse()
 	xlims!(ax,0,1)
 	save("./figures/analysis/prior_ε.eps", f, pt_per_unit = 1)
 end
-#=
-function group_posterior_batch(chain, d, label)
 
-	fig_sz_inch = (6.4,9)
-	font_sz = 12
-
-	colormap = ColorSchemes.seaborn_colorblind6.colors
-
-	df = get_batch_df(d)
-	(choices, data) = df_to_JBT(df, reward_rate)
-	model = logistic_past(choices, data)
-
-	chain_prior = sample(model, Prior(), 2000)
-	df_prior = DataFrame(chain_prior)
-	df_c = DataFrame(chain)
-
-	n_samples = nrow(df_c)
-
-	d_condition = condition_dict(df)
-
-	f = Figure(resolution = 72 .* fig_sz_inch, fontsize=font_sz)
-
-	ga = f[1, 1] = GridLayout()
-	gb = f[1, 2] = GridLayout()
-	gc = f[2, 1] = GridLayout()
-	gd = f[2, 2] = GridLayout()
-	ge = f[3, 1] = GridLayout()
-	gf = f[3, 2] = GridLayout()
-
-	ax = [
-		Axis(ga[1,1],
-			xticks=(0:3, ["Prior", "Base\nfirst", "Veh", "Ket"]),
-			ylabel=L"Bias, $\mu_b$"
-			),
-		Axis(gb[1,1],
-			xlabel=L"Difference in $\mu_b$"
-			),
-		Axis(gc[1,1],
-			xticks=(0:3, ["Prior", "Base\nfirst", "Veh", "Ket"]),
-			ylabel=L"Effect of previous trial, $\mu_w$"
-			),
-		Axis(gd[1,1],
-			xlabel=L"Difference in $\mu_w$"
-			),
-		Axis(ge[1,1],
-			xticks=(0:3, ["Prior", "Base\nfirst", "Veh", "Ket"]),
-			ylabel=L"Effect of reward rate, $\mu_r$"
-			),
-		Axis(gf[1,1],
-			xlabel=L"Difference in $\mu_r$"
-			)
-		]
-
-	condition_v = ["baseline", "vehicle", "ketamine"]
-	param_v = ["μ_b", "μ_p", "μ_r"]
-
-	for (param,i) in zip(param_v, 1:2:6)
-		c = group(chain, param)
-
-		violin!(ax[i], fill(0, length(df_prior[!, "μ_b[1]"])), df_prior[!, "μ_b[1]"], 
-				side=:right, color=(:slategray, 0.4))
-
-		for (condition,j) in zip(condition_v, eachindex(condition_v))
-			violin!(ax[i], fill(j, n_samples), c[:,d_condition[condition],:][:].data, 
-				side=:right, color=colormap[j])
-		end
-
-		density!(ax[i+1], 
-				c[:, d_condition["ketamine"],:][:].data - c[:,d_condition["vehicle"],:][:].data,
-				color=colormap[4])
-
-		vlines!(ax[i+1],[0.0], color=:black, linestyle=:dash, linewidth=0.8)
-		xlims!(ax[i+1], -4.0, 4.0)
-	end
-
-	hidexdecorations!.(ax[1:4], grid=false, label=false)
-	colgap!(f.layout, Relative(0.02))
-	rowgap!(f.layout, Relative(0.0))
-	colsize!(f.layout, 1, Auto(1.2))
-	rowsize!(f.layout, 1, Auto(2))
-	rowsize!(f.layout, 2, Auto(2))
-	rowsize!(f.layout, 3, Auto(2))
-
-	for (label, layout) in zip(["A", "B", "C", "D", "E", "F"], [ga, gb, gc, gd, ge, gf])
-	    Label(layout[1, 1, TopLeft()], label,
-	        textsize = 18,
-	        halign = :right)
-	end
-
-	save(string("./figures/group_post_batch_", label, ".eps"), 
-		f, pt_per_unit = 1)
-end
-
-function subject_posterior_batch(chain, d, label)
-
-	fig_sz_inch = (6.4,9)
-	font_sz = 12
-
-	colormap = ColorSchemes.seaborn_colorblind6.colors
-
-	df = get_batch_df(d)
-	(choices, data) = df_to_JBT(df, reward_rate)
-	model = logistic_past(choices, data)
-
-	chain_prior = sample(model, Prior(), 2000)
-	df_prior = DataFrame(chain_prior)
-	df_c = DataFrame(chain)
-
-	n_samples = nrow(df_c)
-
-	d_condition = condition_dict(df)
-
-	f = Figure(resolution = 72 .* fig_sz_inch, fontsize=font_sz)
-	ax = [
-		Axis(f[1,1]),
-		Axis(f[2,1]),
-		Axis(f[3,1])
-		]
-
-	for s = 1:data.n_subjects
-
-		B = (df_c[!, "μ_b[$(d_condition["ketamine"])]"] .+ 
-			df_c[!, "b_norm[$(d_condition["ketamine"]),$(s)]"] .* 
-			df_c[!, "σ_b[$(d_condition["ketamine"])]"]) .-
-			(df_c[!, "μ_b[$(d_condition["vehicle"])]"] .+ 
-			df_c[!, "b_norm[$(d_condition["vehicle"]),$(s)]"] .* 
-			df_c[!, "σ_b[$(d_condition["vehicle"])]"])
-
-		R = (df_c[!, "μ_r[$(d_condition["ketamine"])]"] .+ 
-			df_c[!, "w_r_norm[$(d_condition["ketamine"]),$(s)]"] .* 
-			df_c[!, "σ_r[$(d_condition["ketamine"])]"]) .-
-			(df_c[!, "μ_r[$(d_condition["vehicle"])]"] .+ 
-			df_c[!, "w_r_norm[$(d_condition["vehicle"]),$(s)]"] .* 
-			df_c[!, "σ_r[$(d_condition["vehicle"])]"])
-
-		P = (df_c[!, "μ_p[$(d_condition["ketamine"])]"] .+ 
-			df_c[!, "w_p_norm[$(d_condition["ketamine"]),$(s)]"] .* 
-			df_c[!, "σ_p[$(d_condition["ketamine"])]"]) .-
-			(df_c[!, "μ_p[$(d_condition["vehicle"])]"] .+ 
-			df_c[!, "w_p_norm[$(d_condition["vehicle"]),$(s)]"] .* 
-			df_c[!, "σ_p[$(d_condition["vehicle"])]"])
-
-		B_lims=hdi(B; hdi_prob=0.9)
-		R_lims=hdi(R; hdi_prob=0.9)
-		P_lims=hdi(P; hdi_prob=0.9)
-
-		errorbars!(ax[1], [s], [mode(B)], [B_lims[1]], [B_lims[2]])
-		errorbars!(ax[2], [s], [mode(R)], [R_lims[1]], [R_lims[2]])
-		errorbars!(ax[3], [s], [mode(P)], [P_lims[1]], [P_lims[2]])
-	end
-
-	save(string("./figures/subj_post_batch_", label, ".eps"), 
-		f, pt_per_unit = 1)
-end
-
-function subject_posterior_lapse_batch(chain, d, label)
-
-	fig_sz_inch = (6.4, 4.8)
-	font_sz = 12
-
-	colormap = ColorSchemes.seaborn_colorblind6.colors
-
-	df = get_batch_df(d)
-	(choices, data) = df_to_JBT(df, reward_rate)
-	model = logistic_past(choices, data)
-
-	chain_prior = sample(model, Prior(), 2000)
-	df_prior = DataFrame(chain_prior)
-	df_c = DataFrame(chain)
-
-	f = Figure(resolution = 72 .* fig_sz_inch, fontsize=font_sz)
-	ax = Axis(f[1,1],
-			xticks=(0:1, ["Prior", "Posterior"]),
-			ylabel=L"Subject-level lapse rate $\epsilon$")
-
-	ε_prior = reduce(vcat, [df_prior[!, "μ_ε"] .+ df_prior[!, "ε_norm[$(i)]"].*df_prior[!, "σ_ε"] for i=1:13])
-	ε = reduce(vcat, [df_c[!, "μ_ε"] .+ df_c[!, "ε_norm[$(i)]"].*df_c[!, "σ_ε"] for i=1:13])
-
-	violin!(ax, fill(0, length(ε_prior)), cdf.(Normal(0,1), ε_prior), 
-			datalimits=extrema, side=:right, color=(:slategray, 0.4))
-	violin!(ax, fill(1, length(ε)), cdf.(Normal(0,1), ε), 
-			datalimits=extrema, side=:right, color=colormap[1])
-
-	save(string("./figures/subj_post_batch_ε_", label, ".eps"), 
-		f, pt_per_unit = 1)
-end
-=#
 function group_posterior()
 
 	fig_sz_inch = (6.4,9)
@@ -640,8 +320,8 @@ function group_posterior()
 	colormap = ColorSchemes.seaborn_colorblind.colors
 
 	d = Dict(
-			"./exp/probe/baseline/baseline_no_effect/"=>"baseline", 
-			"./exp/probe/ketamine/ketamine_no_effect/"=>"ketamine", 
+			"./exp/probe/baseline/baseline_no_effect/"=>"baseline",
+			"./exp/probe/ketamine/ketamine_no_effect/"=>"ketamine",
 			"./exp/probe/ketamine/vehicle_no_effect/"=>"vehicle"
 			)
 	df = get_batch_df(d)
@@ -683,23 +363,23 @@ function group_posterior()
 
 	for (param,i) in zip(param_v, 1:3)
 
-		violin!(ax[i], fill(0, length(df_prior[!, "μ_b[1]"])), df_prior[!, "μ_b[1]"], 
+		violin!(ax[i], fill(0, length(df_prior[!, "μ_b[1]"])), df_prior[!, "μ_b[1]"],
 				color=(:slategray, 0.4))
 
 		for (condition,j) in zip(condition_v, eachindex(condition_v))
 			violin!(
-					ax[i], 
-					fill(j, n_samples), 
-					df_e[!, string(param, "[$(d_condition[condition])]")], 
-					side=:right, 
+					ax[i],
+					fill(j, n_samples),
+					df_e[!, string(param, "[$(d_condition[condition])]")],
+					side=:right,
 					color=colormap[1],
 					label="Original studies"
 					)
 			violin!(
-					ax[i], 
-					fill(j, n_samples), 
-					df_ne[!, string(param, "[$(d_condition[condition])]")], 
-					side=:left, 
+					ax[i],
+					fill(j, n_samples),
+					df_ne[!, string(param, "[$(d_condition[condition])]")],
+					side=:left,
 					color=colormap[2],
 					label="Replication studies"
 					)
@@ -728,8 +408,8 @@ function group_posterior_diff()
 	colormap = ColorSchemes.seaborn_colorblind.colors
 
 	d = Dict(
-			"./exp/probe/baseline/baseline_no_effect/"=>"baseline", 
-			"./exp/probe/ketamine/ketamine_no_effect/"=>"ketamine", 
+			"./exp/probe/baseline/baseline_no_effect/"=>"baseline",
+			"./exp/probe/ketamine/ketamine_no_effect/"=>"ketamine",
 			"./exp/probe/ketamine/vehicle_no_effect/"=>"vehicle"
 			)
 	df = get_batch_df(d)
@@ -770,21 +450,21 @@ function group_posterior_diff()
 	for (param,i) in zip(param_v, 1:3)
 
 			violin!(
-					ax[i], 
-					fill(1, n_samples), 
+					ax[i],
+					fill(1, n_samples),
 					df_e[!, string(param, "[$(d_condition["ketamine"])]")] .-
-					df_e[!, string(param, "[$(d_condition["vehicle"])]")], 
-					side=:right, 
+					df_e[!, string(param, "[$(d_condition["vehicle"])]")],
+					side=:right,
 					color=colormap[1],
 					label="Original studies"
 					)
 
 			violin!(
-					ax[i], 
-					fill(1, n_samples), 
+					ax[i],
+					fill(1, n_samples),
 					df_ne[!, string(param, "[$(d_condition["ketamine"])]")] .-
-					df_ne[!, string(param, "[$(d_condition["vehicle"])]")], 
-					side=:left, 
+					df_ne[!, string(param, "[$(d_condition["vehicle"])]")],
+					side=:left,
 					color=colormap[2],
 					label="Replication studies"
 					)
@@ -813,8 +493,8 @@ function subject_posterior()
 
 	df = get_batch_df(
 					Dict(
-						"./exp/probe/baseline/baseline_effect/"=>"baseline", 
-						"./exp/probe/ketamine/ketamine_effect/"=>"ketamine", 
+						"./exp/probe/baseline/baseline_effect/"=>"baseline",
+						"./exp/probe/ketamine/ketamine_effect/"=>"ketamine",
 						"./exp/probe/ketamine/vehicle_effect/"=>"vehicle"
 						)
 					)
@@ -822,8 +502,8 @@ function subject_posterior()
 
 	df = get_batch_df(
 					Dict(
-						"./exp/probe/baseline/baseline_no_effect/"=>"baseline", 
-						"./exp/probe/ketamine/ketamine_no_effect/"=>"ketamine", 
+						"./exp/probe/baseline/baseline_no_effect/"=>"baseline",
+						"./exp/probe/ketamine/ketamine_no_effect/"=>"ketamine",
 						"./exp/probe/ketamine/vehicle_no_effect/"=>"vehicle"
 						)
 					)
@@ -868,15 +548,15 @@ function subject_posterior()
 		for (condition,j) in zip(condition_v, eachindex(condition_v))
 
 			E = [
-				df_e[!, string(param[1], "[$(d_condition[condition])]")] .+ 
-				df_e[!, string(param[3], "[$(d_condition[condition]),$(s)]")] .* 
+				df_e[!, string(param[1], "[$(d_condition[condition])]")] .+
+				df_e[!, string(param[3], "[$(d_condition[condition]),$(s)]")] .*
 				df_e[!, string(param[2], "[$(d_condition[condition])]")]
 				for s=1:data_e.n_subjects
 				]
 
 			NE = [
-				df_ne[!, string(param[1], "[$(d_condition[condition])]")] .+ 
-				df_ne[!, string(param[3], "[$(d_condition[condition]),$(s)]")] .* 
+				df_ne[!, string(param[1], "[$(d_condition[condition])]")] .+
+				df_ne[!, string(param[3], "[$(d_condition[condition]),$(s)]")] .*
 				df_ne[!, string(param[2], "[$(d_condition[condition])]")]
 				for s=1:data_ne.n_subjects
 				]
@@ -884,20 +564,20 @@ function subject_posterior()
 			d = Uniform(j-0.3,j-0.05)
 
 			scatter!(
-					ax[i], 
-					rand(d, data_e.n_subjects) .+ 0.35, 
-					mean.(E), 
-					marker=:circle, 
+					ax[i],
+					rand(d, data_e.n_subjects) .+ 0.35,
+					mean.(E),
+					marker=:circle,
 					markersize=6,
 					color=(colormap[1],0.5),
 					label="Original studies"
 					)
-			
+
 			scatter!(
-					ax[i], 
-					rand(d, data_ne.n_subjects), 
+					ax[i],
+					rand(d, data_ne.n_subjects),
 					mean.(NE),
-					marker=:circle, 
+					marker=:circle,
 					markersize=6 ,
 					color=(colormap[2],0.5),
 					label="Replication studies"
@@ -929,8 +609,8 @@ function subject_posterior_lapse()
 
 	df = get_batch_df(
 					Dict(
-						"./exp/probe/baseline/baseline_effect/"=>"baseline", 
-						"./exp/probe/ketamine/ketamine_effect/"=>"ketamine", 
+						"./exp/probe/baseline/baseline_effect/"=>"baseline",
+						"./exp/probe/ketamine/ketamine_effect/"=>"ketamine",
 						"./exp/probe/ketamine/vehicle_effect/"=>"vehicle"
 						)
 					)
@@ -938,8 +618,8 @@ function subject_posterior_lapse()
 
 	df = get_batch_df(
 					Dict(
-						"./exp/probe/baseline/baseline_no_effect/"=>"baseline", 
-						"./exp/probe/ketamine/ketamine_no_effect/"=>"ketamine", 
+						"./exp/probe/baseline/baseline_no_effect/"=>"baseline",
+						"./exp/probe/ketamine/ketamine_no_effect/"=>"ketamine",
 						"./exp/probe/ketamine/vehicle_no_effect/"=>"vehicle"
 						)
 					)
@@ -962,24 +642,24 @@ function subject_posterior_lapse()
 
 	ε_prior = reduce(vcat, [df_prior[!, "μ_ε"] .+ df_prior[!, "ε_norm[$(i)]"].*df_prior[!, "σ_ε"] for i=1:13])
 	ε_e = reduce(
-				vcat, 
-				[df_e[!, "μ_ε"] .+ df_e[!, "ε_norm[$(s)]"].*df_e[!, "σ_ε"] 
+				vcat,
+				[df_e[!, "μ_ε"] .+ df_e[!, "ε_norm[$(s)]"].*df_e[!, "σ_ε"]
 				for s=1:data_e.n_subjects]
 				)
 	ε_ne = reduce(
-				vcat, 
-				[df_ne[!, "μ_ε"] .+ df_ne[!, "ε_norm[$(s)]"].*df_ne[!, "σ_ε"] 
+				vcat,
+				[df_ne[!, "μ_ε"] .+ df_ne[!, "ε_norm[$(s)]"].*df_ne[!, "σ_ε"]
 				for s=1:data_ne.n_subjects]
 				)
 
-	violin!(ax, fill(0, length(ε_prior)), cdf.(Normal(0,1), ε_prior), 
+	violin!(ax, fill(0, length(ε_prior)), cdf.(Normal(0,1), ε_prior),
 			datalimits=extrema, color=(:slategray, 0.4))
 
-	violin!(ax, fill(1, length(ε_e)), cdf.(Normal(0,1), ε_e), 
+	violin!(ax, fill(1, length(ε_e)), cdf.(Normal(0,1), ε_e),
 			datalimits=extrema, side=:right, color=colormap[1],
 			label="Original studies")
 
-	violin!(ax, fill(1, length(ε_ne)), cdf.(Normal(0,1), ε_ne), 
+	violin!(ax, fill(1, length(ε_ne)), cdf.(Normal(0,1), ε_ne),
 			datalimits=extrema, side=:left, color=colormap[2],
 			label="Replication studies")
 
@@ -988,10 +668,9 @@ function subject_posterior_lapse()
 	save("./figures/analysis/subj_post_lapse.eps", f, pt_per_unit = 1)
 end
 
-df = read_JBT("./exp/probe/baseline/") 
+df = read_JBT("./exp/probe/baseline/")
 
 CBI_over_trials(df, n_blocks=5)
-#=
 win_stay_lose_shift(df)
 subject_prior_lapse()
 group_posterior()
@@ -1000,9 +679,3 @@ subject_posterior_lapse()
 group_posterior_amph()
 subject_posterior_lapse_amph()
 group_posterior_diff()
-=#
-
-
-
-
-

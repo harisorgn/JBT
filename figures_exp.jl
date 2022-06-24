@@ -1,7 +1,4 @@
 
-include("read.jl")
-include("plot.jl")
-
 function figure_drug(batch_ID, study, sessions, session_labels, cue_labels)
 
 	fig_sz_inch = (6.4, 8)
@@ -28,25 +25,25 @@ function figure_drug(batch_ID, study, sessions, session_labels, cue_labels)
 	ge = f[3, 2] = GridLayout()
 
 	ax = [
-		Axis(ga[1,1], 
+		Axis(ga[1,1],
 			xticks=(1:length(sessions[sessions.!="vehicle"]), session_labels[sessions.!="vehicle"]),
-			yticks=[-1.0,-0.5,0.0,0.5,1.0], 
+			yticks=[-1.0,-0.5,0.0,0.5,1.0],
 			ylabel="Difference in CBI"),
-		Axis(gb[1,1], 
-			yticks=0.0:25.0:100.0, 
-			xlabel="Cue", 
-			xticks=(1:length(cues), cue_labels), 
+		Axis(gb[1,1],
+			yticks=0.0:25.0:100.0,
+			xlabel="Cue",
+			xticks=(1:length(cues), cue_labels),
 			ylabel="HA responses [%]"),
-		Axis(gc[1,1], 
-			xlabel="Cue", 
-			xticks=(1:length(cues), cue_labels), 
+		Axis(gc[1,1],
+			xlabel="Cue",
+			xticks=(1:length(cues), cue_labels),
 			ylabel="Response time [sec]"),
-		Axis(gd[1,1], 
-			xlabel="Cue", 
-			xticks=(1:length(cues), cue_labels), 
+		Axis(gd[1,1],
+			xlabel="Cue",
+			xticks=(1:length(cues), cue_labels),
 			ylabel="Omissions [%]"),
-		Axis(ge[1,1], 
-			xticks=(1:length(sessions), session_labels), 
+		Axis(ge[1,1],
+			xticks=(1:length(sessions), session_labels),
 			ylabel="Premature responses [%]")
 		]
 
@@ -74,9 +71,9 @@ function figure_drug(batch_ID, study, sessions, session_labels, cue_labels)
 	save(string("./figures/exp/", batch_ID, "_", study, ".eps"), f, pt_per_unit = 1)
 end
 
-function figure_probe(batch_ID, study, sessions, session_labels, cue_labels; 
+function figure_probe(batch_ID, study, sessions, session_labels, cue_labels;
 					ID_excluded=[], S_excluded=[], reversed=false)
-	
+
 	fig_sz_inch = (6.4, 8)
 	font_sz = 11
 
@@ -102,24 +99,24 @@ function figure_probe(batch_ID, study, sessions, session_labels, cue_labels;
 	ge = f[3, 2] = GridLayout()
 
 	ax = [
-		Axis(ga[1,1], 
-			xticks=(1:length(sessions), session_labels), 
+		Axis(ga[1,1],
+			xticks=(1:length(sessions), session_labels),
 			ylabel="CBI"),
 		Axis(gb[1,1],
-			yticks=0.0:25.0:100.0, 
-			xlabel="Cue", 
-			xticks=(1:length(cues), cue_labels), 
+			yticks=0.0:25.0:100.0,
+			xlabel="Cue",
+			xticks=(1:length(cues), cue_labels),
 			ylabel="HA responses [%]"),
-		Axis(gc[1,1], 
-			xlabel="Cue", 
-			xticks=(1:length(cues), cue_labels), 
+		Axis(gc[1,1],
+			xlabel="Cue",
+			xticks=(1:length(cues), cue_labels),
 			ylabel="Response time [sec]"),
-		Axis(gd[1,1], 
-			xlabel="Cue", 
-			xticks=(1:length(cues), cue_labels), 
+		Axis(gd[1,1],
+			xlabel="Cue",
+			xticks=(1:length(cues), cue_labels),
 			ylabel="Omissions [%]"),
-		Axis(ge[1,1], 
-			xticks=(1:length(sessions), session_labels), 
+		Axis(ge[1,1],
+			xticks=(1:length(sessions), session_labels),
 			ylabel="Premature responses [%]")
 		]
 
@@ -147,68 +144,68 @@ function figure_probe(batch_ID, study, sessions, session_labels, cue_labels;
 	save(string("./figures/exp/", batch_ID, "_", study, ".eps"), f, pt_per_unit = 1)
 end
 
-figure_probe("HO2", 
-			"1vs1", 
+figure_probe("HO2",
+			"1vs1",
 			["1vs1_2"],
-			["Session 2"], 
-			["2 kHz", "5 kHz", "8 kHz"]; 
-			ID_excluded=["HO2_4", "HO2_11"], 
+			["Session 2"],
+			["2 kHz", "5 kHz", "8 kHz"];
+			ID_excluded=["HO2_4", "HO2_11"],
 			S_excluded=["1vs1_1"]
 			)
 
-figure_probe("HO2", 
-			"4vs1", 
+figure_probe("HO2",
+			"4vs1",
 			["4vs1_1", "4vs1_2"],
-			["Session 1", "Session 2"], 
+			["Session 1", "Session 2"],
 			["HC", "AC", "LC"]
 			)
 
-figure_drug("HO2", 
+figure_drug("HO2",
 			"24hket",
 			["vehicle", "ketamine_24h"],
 			["Vehicle", "Ketamine (24h)"],
 			["HC", "AC", "LC"]
 			)
 
-figure_drug("HO2", 
-			"amph", 
+figure_drug("HO2",
+			"amph",
 			["vehicle", "amphetamine"],
-			["Vehicle", "Amphetamine"], 
-			["HC", "AC", "LC"]
-			)
-
-figure_drug("HO2", 
-			"ket", 
-			["vehicle", "ketamine"],
-			["Vehicle", "Ketamine"], 
+			["Vehicle", "Amphetamine"],
 			["HC", "AC", "LC"]
 			)
 
 figure_drug("HO2",
-			"ket_ds", 
+			"ket",
+			["vehicle", "ketamine"],
+			["Vehicle", "Ketamine"],
+			["HC", "AC", "LC"]
+			)
+
+figure_drug("HO2",
+			"ket_ds",
 			["vehicle", "ketamine_03", "ketamine_1", "ketamine_3"],
 			["V", "K 0.3", "K 1.0", "K 3.0"],
 			["HC", "AC", "LC"]
 			)
 
-figure_probe("HO3", 
-			"1vs1", 
+figure_probe("HO3",
+			"1vs1",
 			["1vs1_1", "1vs1_2"],
 			["Session 1", "Session 2"],
 			["2 kHz\n+ LL", "LL", "8 kHz\n+ LL"]
 			)
 
-figure_drug("HO3", 
-			"ket_1vs1", 
+figure_drug("HO3",
+			"ket_1vs1",
 			["vehicle", "ketamine"],
-			["Vehicle", "Ketamine"], 
+			["Vehicle", "Ketamine"],
 			["2 kHz\n+ LL", "LL", "8 kHz\n+ LL"]
 			)
 
-figure_probe("HO3", 
-			"1vs1_reversed", 
+figure_probe("HO3",
+			"1vs1_reversed",
 			["1vs1_reversed_1", "1vs1_reversed_2"],
-			["Session 1", "Session 2"], 
+			["Session 1", "Session 2"],
 			["2 kHz\n+ LL", "LL", "8 kHz\n+ LL"];
 			reversed=true
 			)
