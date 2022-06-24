@@ -2,6 +2,8 @@ using JBT
 using Serialization
 using ArviZ
 
+include("utils.jl")
+
 df = get_batch_df(
     Dict(
         "./exp/probe/baseline/baseline_effect/"=>"baseline",
@@ -10,8 +12,8 @@ df = get_batch_df(
         )
     )
 
-chain_RR = deserialize("chain_RR_effect_batch.jls")
-chain_learning = deserialize("chain_learning_effect_batch.jls")
+chain_RR = deserialize("./chains/chain_RR_effect_batch.jls")
+chain_learning = deserialize("./chains/chain_learning_effect_batch.jls")
 
 idt_learning = chain_to_idt(df, chain_learning, cue_reward_rate)
 idt_RR = chain_to_idt(df, chain_RR, reward_rate)
